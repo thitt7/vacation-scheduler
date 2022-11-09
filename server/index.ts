@@ -1,35 +1,35 @@
+import Airtable from 'airtable';
+import { Request, Response, NextFunction } from 'express'
+
 require('dotenv').config();
 const express = require("express");
-const Airtable = require('airtable');
+const airtable = require('airtable');
 
 const PORT = process.env.PORT || 3005;
 
-const {AIRTABLE_API_KEY: API_KEY, BASE_ID: BASE, TABLE_ID: TABLE} = process.env
+const {AIRTABLE_API_KEY: API_KEY, BASE_ID: BASE, REQUEST_TABLE_ID: REQUEST_TABLE, EMPLOYEE_DATA_TABLE_ID: EMPLOYEE_TABLE, CALENDAR_TABLE_ID: CALENDAR_TABLE} = process.env
 
 /* Airtable Authentication */
 // Vacation Schedule = Table
 // Vacation Calendar = View
 // const base = require('airtable').base(BASE);
-const base = new Airtable({apiKey: API_KEY}).base(BASE);
+const base = new airtable({apiKey: API_KEY}).base(BASE);
 
-base(TABLE).select({
-    // Selecting the first 3 records in Grid view:
-    maxRecords: 10
-}).eachPage(function page(records, fetchNextPage) {
-    // This function (`page`) will get called for each page of records.
+// base(REQUEST_TABLE).select({
+//     maxRecords: 10
+// }).eachPage( (records, fetchNextPage) => {
+//     // This function (`page`) will get called for each page of records.
+//     records.forEach(function (record) {
+//         console.log('Record: ', record);
+//     });
+//     // To fetch the next page of records, call `fetchNextPage`.
+//     // If there are more records, `page` will get called again.
+//     // If there are no more records, `done` will get called.
+//     fetchNextPage();
 
-    records.forEach(function(record) {
-        console.log('Record: ', record);
-    });
-
-    // To fetch the next page of records, call `fetchNextPage`.
-    // If there are more records, `page` will get called again.
-    // If there are no more records, `done` will get called.
-    fetchNextPage();
-
-}, function done(err) {
-    if (err) { console.error(err); return; }
-});
+// }, (err) => {
+//         if (err) { console.error(err); return; }
+//     });
 
 /* Express Setup */
 const app = express();
@@ -37,12 +37,36 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-app.post("/create", (req, res) => {
-    res.json({ message: "request endpoint reached" });
+app.post("/create", (req: Request, res: Response) => {
     console.log(req.body)
+    let recordID: any = 'record'
+
+    /* Check Employee Data to see if request can be fulfilled */
+    base(EMPLOYEE_TABLE).select({
+        maxRecords: 10
+    }).eachPage( (records: Airtable.Records<any>, fetchNextPage: any) => {
+        records.forEach( (record: Airtable.Record<any>) => {
+            console.log('<------------------------------->')
+            console.log('record id: ', record.id)
+            console.log('email: ', record.fields.Assignee.email);
+            console.log('submitted email: ', req.body.username)
+
+            recordID = () => {
+                if (record.fields.Assignee.email == req.body.username) {
+                    console.log("acquired correct record ID")
+                    return record.id
+                }
+                else {return}
+            }
+        });
+        fetchNextPage();
+    
+    }, (err: Airtable.Error) => {
+            if (err) { console.error(err); return; }
+        });
 
     /* Create record from body request object */
-    base(TABLE).create([
+    base(REQUEST_TABLE).create([
         {
           "fields": {
             "Name": req.body.name, 
@@ -51,25 +75,24 @@ app.post("/create", (req, res) => {
             "Type": req.body.type, 
             "Status": "Todo", 
             "Collaborator": {
-                id: 'usrXqdzC1eVzlvmQr',
-                email: 'placeholder@yourmom.com',
-                name: 'Tristan Hitt'
+                email: req.body.username
               }
           }
         }
-      ], (err, records) => {
+      ], (err: Airtable.Error, records: Airtable.Records<any>) => {
         if (err) {
-          console.error(err);
+          console.log(err)
+        res.status(err.statusCode).send({ error: 'something blew up' })
           return;
         }
-        records.forEach( (record) => {
-            console.log(record.fields);
-        });
+        // records.forEach( (record: Airtable.Record<any>) => {
+        //     console.log(record.fields);
+        // });
       });
   });
 
   /* Handle GET requests */
-  app.get("/data", (req, res) => {
+  app.get("/data", (req: Request, res: Response) => {
     res.json({ message: "Hello from server!" });
   });
 

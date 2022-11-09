@@ -1,4 +1,4 @@
-import React, {useState, useEffect, SetStateAction} from 'react';
+import React, {useState, useEffect} from 'react';
 
 const Request = () => {
     const [formData, setFormData]: any = useState({})
@@ -17,9 +17,11 @@ const Request = () => {
           })
           .then( async res => {
             console.log(res)
-            if (res.ok) {
-              const response = await res.json()
+            console.log(res.status)
+            if (!res.ok) {
+            alert("Error " + res.status + ": please try again")
             }
+            return res.json()
           })
           .then(data =>{
             console.log(data)
@@ -39,19 +41,23 @@ const Request = () => {
         <div className="request-form">
             <form onSubmit={(e)=>handleSubmit(e)}>
                 <label>
+                    Username:
+                    <input required type="email" name="username" onChange={(e)=>handleChange(e)} />
+                </label>
+                <label>
                     Name:
-                    <input type="text" name="name" onChange={(e)=>handleChange(e)} />
+                    <input required type="text" name="name" onChange={(e)=>handleChange(e)} />
                 </label>
                 <select name="type" onChange={(e)=>handleChange(e)}>
                     {types.map((val: string, i: number) => (<option key={i} value={val}> {val} </option>)) }
                 </select>
                 <label>
                     Start Date:
-                    <input type="date" name="start date" onChange={(e)=>handleChange(e)} />
+                    <input required type="date" name="start date" onChange={(e)=>handleChange(e)} />
                 </label>
                 <label>
                     End Date:
-                    <input type="date" name="end date" onChange={(e)=>handleChange(e)} />
+                    <input required type="date" name="end date" onChange={(e)=>handleChange(e)} />
                 </label>
                 <input type="submit" value="Submit" />
             </form>
